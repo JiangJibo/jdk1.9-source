@@ -8,8 +8,6 @@
   <name>jdk-source</name>
   <description>jdk源码</description>
   <modules>
-    <module>jdk1.7</module>
-    <module>jdk1.8</module>
     <module>jdk1.9</module>
     <module>demo</module>
   </modules>
