@@ -42,7 +42,7 @@ class NativeObject {                                    // package-private
 
     protected static final Unsafe unsafe = Unsafe.getUnsafe();
 
-    // Native allocation address;
+    // Native allocation address; 分配存储文件描述符数组的内存地址
     // may be smaller than the base address due to page-size rounding
     //
     protected long allocationAddress;
@@ -76,6 +76,7 @@ class NativeObject {                                    // package-private
             this.address = this.allocationAddress;
         } else {
             int ps = pageSize();
+            // 向系统申请一段内存,大小为一页+文件描述符数字大小(初始值64)
             long a = unsafe.allocateMemory(size + ps);
             this.allocationAddress = a;
             this.address = a + ps - (a & (ps - 1));
@@ -388,7 +389,7 @@ class NativeObject {                                    // package-private
         return byteOrder;
     }
 
-    // Cache for page size
+    // Cache for page size, 计算机页大小
     private static int pageSize = -1;
 
     /**

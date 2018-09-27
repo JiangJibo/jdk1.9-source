@@ -31,11 +31,12 @@ package sun.nio.ch;
 import java.lang.annotation.Native;
 
 /**
+ * 操作一个关于文件描述符和事件的数组工具类
  * Manipulates a native array of structs corresponding to (fd, events) pairs.
  *
  * typedef struct pollfd {
- *    SOCKET fd;            // 4 bytes
- *    short events;         // 2 bytes
+ * SOCKET fd;            // 4 bytes
+ * short events;         // 2 bytes
  * } pollfd_t;
  *
  * @author Konstantin Kladko
@@ -48,14 +49,20 @@ class PollArrayWrapper {
 
     long pollArrayAddress; // pollArrayAddress
 
-    @Native private static final short FD_OFFSET     = 0; // fd offset in pollfd
-    @Native private static final short EVENT_OFFSET  = 4; // events offset in pollfd
+    @Native
+    private static final short FD_OFFSET = 0; // fd offset in pollfd
+    @Native
+    private static final short EVENT_OFFSET = 4; // events offset in pollfd
 
-    static short SIZE_POLLFD = 8; // sizeof pollfd struct
+    static short SIZE_POLLFD = 8; // sizeof pollfd struct(结构),POLLFD的字节大小
 
     private int size; // Size of the pollArray
 
+    /**
+     * @param newSize 初始值8
+     */
     PollArrayWrapper(int newSize) {
+        // 文件描述符数组大小初始值:  8*8=64字节
         int allocationSize = newSize * SIZE_POLLFD;
         pollArray = new AllocatedNativeObject(allocationSize, true);
         pollArrayAddress = pollArray.address();
@@ -70,7 +77,7 @@ class PollArrayWrapper {
     // Writes the pollfd entry from the source wrapper at the source index
     // over the entry in the target wrapper at the target index.
     void replaceEntry(PollArrayWrapper source, int sindex,
-                                     PollArrayWrapper target, int tindex) {
+                      PollArrayWrapper target, int tindex) {
         target.putDescriptor(tindex, source.getDescriptor(sindex));
         target.putEventOps(tindex, source.getEventOps(sindex));
     }
@@ -78,8 +85,7 @@ class PollArrayWrapper {
     // Grows the pollfd array to new size
     void grow(int newSize) {
         PollArrayWrapper temp = new PollArrayWrapper(newSize);
-        for (int i = 0; i < size; i++)
-            replaceEntry(this, i, temp, i);
+        for (int i = 0; i < size; i++) { replaceEntry(this, i, temp, i); }
         pollArray.free();
         pollArray = temp.pollArray;
         this.size = temp.size;
@@ -104,7 +110,7 @@ class PollArrayWrapper {
     }
 
     int getDescriptor(int i) {
-       return pollArray.getInt(SIZE_POLLFD * i + FD_OFFSET);
+        return pollArray.getInt(SIZE_POLLFD * i + FD_OFFSET);
     }
 
     // Adds Windows wakeup socket at a given index.

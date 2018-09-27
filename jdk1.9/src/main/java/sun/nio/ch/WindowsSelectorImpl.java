@@ -26,7 +26,6 @@
 /*
  */
 
-
 package sun.nio.ch;
 
 import java.nio.channels.spi.SelectorProvider;
@@ -49,6 +48,7 @@ import java.util.Iterator;
  */
 
 final class WindowsSelectorImpl extends SelectorImpl {
+
     // Initial capacity of the poll array
     private final int INIT_CAP = 8;
     // Maximum number of sockets for select().
@@ -85,31 +85,37 @@ final class WindowsSelectorImpl extends SelectorImpl {
 
     // Maps file descriptors to their indices in  pollArray
     private static final class FdMap extends HashMap<Integer, MapEntry> {
+
         static final long serialVersionUID = 0L;
+
         private MapEntry get(int desc) {
             return get(Integer.valueOf(desc));
         }
+
         private MapEntry put(SelectionKeyImpl ski) {
             return put(Integer.valueOf(ski.channel.getFDVal()), new MapEntry(ski));
         }
+
         private MapEntry remove(SelectionKeyImpl ski) {
             Integer fd = Integer.valueOf(ski.channel.getFDVal());
             MapEntry x = get(fd);
-            if ((x != null) && (x.ski.channel == ski.channel))
-                return remove(fd);
+            if ((x != null) && (x.ski.channel == ski.channel)) { return remove(fd); }
             return null;
         }
     }
 
     // class for fdMap entries
     private static final class MapEntry {
+
         SelectionKeyImpl ski;
         long updateCount = 0;
         long clearedCount = 0;
+
         MapEntry(SelectionKeyImpl ski) {
             this.ski = ski;
         }
     }
+
     private final FdMap fdMap = new FdMap();
 
     // SubSelector for the main thread
@@ -135,9 +141,11 @@ final class WindowsSelectorImpl extends SelectorImpl {
         pollWrapper.addWakeupSocket(wakeupSourceFd, 0);
     }
 
+    @Override
     protected int doSelect(long timeout) throws IOException {
-        if (channelArray == null)
+        if (channelArray == null) {
             throw new ClosedSelectorException();
+        }
         this.timeout = timeout; // set selector timeout
         processDeregisterQueue();
         if (interruptTriggered) {
@@ -161,11 +169,10 @@ final class WindowsSelectorImpl extends SelectorImpl {
                 finishLock.setException(e); // Save this exception
             }
             // Main thread is out of poll(). Wakeup others and wait for them
-            if (threads.size() > 0)
-                finishLock.waitForHelperThreads();
-          } finally {
-              end();
-          }
+            if (threads.size() > 0) { finishLock.waitForHelperThreads(); }
+        } finally {
+            end();
+        }
         // Done with poll(). Set wakeupSocket to nonsignaled  for the next run.
         finishLock.checkForException();
         processDeregisterQueue();
@@ -179,15 +186,18 @@ final class WindowsSelectorImpl extends SelectorImpl {
     private final StartLock startLock = new StartLock();
 
     private final class StartLock {
+
         // A variable which distinguishes the current run of doSelect from the
         // previous one. Incrementing runsCounter and notifying threads will
         // trigger another round of poll.
         private long runsCounter;
-       // Triggers threads, waiting on this lock to start polling.
+
+        // Triggers threads, waiting on this lock to start polling.
         private synchronized void startThreads() {
             runsCounter++; // next run
             notifyAll(); // wake up threads.
         }
+
         // This function is called by a helper thread to wait for the
         // next round of poll(). It also checks, if this thread became
         // redundant. If yes, it returns true, notifying the thread
@@ -215,7 +225,8 @@ final class WindowsSelectorImpl extends SelectorImpl {
     // with poll().
     private final FinishLock finishLock = new FinishLock();
 
-    private final class FinishLock  {
+    private final class FinishLock {
+
         // Number of helper threads, that did not finish yet.
         private int threadsToFinish;
 
@@ -236,7 +247,9 @@ final class WindowsSelectorImpl extends SelectorImpl {
             }
             threadsToFinish--;
             if (threadsToFinish == 0) // all helper threads finished poll().
+            {
                 notify();             // notify the main thread
+            }
         }
 
         // The main thread invokes this function on finishLock to wait
@@ -264,10 +277,9 @@ final class WindowsSelectorImpl extends SelectorImpl {
         // Checks if there was any exception during the last run.
         // If yes, throws it
         private void checkForException() throws IOException {
-            if (exception == null)
-                return;
-            StringBuffer message =  new StringBuffer("An exception occurred" +
-                                       " during the execution of select(): \n");
+            if (exception == null) { return; }
+            StringBuffer message = new StringBuffer("An exception occurred" +
+                " during the execution of select(): \n");
             message.append(exception);
             message.append('\n');
             exception = null;
@@ -276,13 +288,14 @@ final class WindowsSelectorImpl extends SelectorImpl {
     }
 
     private final class SubSelector {
+
         private final int pollArrayIndex; // starting index in pollArray to poll
         // These arrays will hold result of native select().
         // The first element of each array is the number of selected sockets.
         // Other elements are file descriptors of selected sockets.
-        private final int[] readFds = new int [MAX_SELECTABLE_FDS + 1];
-        private final int[] writeFds = new int [MAX_SELECTABLE_FDS + 1];
-        private final int[] exceptFds = new int [MAX_SELECTABLE_FDS + 1];
+        private final int[] readFds = new int[MAX_SELECTABLE_FDS + 1];
+        private final int[] writeFds = new int[MAX_SELECTABLE_FDS + 1];
+        private final int[] exceptFds = new int[MAX_SELECTABLE_FDS + 1];
 
         private SubSelector() {
             this.pollArrayIndex = 0; // main thread
@@ -292,38 +305,38 @@ final class WindowsSelectorImpl extends SelectorImpl {
             this.pollArrayIndex = (threadIndex + 1) * MAX_SELECTABLE_FDS;
         }
 
-        private int poll() throws IOException{ // poll for the main thread
+        private int poll() throws IOException { // poll for the main thread
             return poll0(pollWrapper.pollArrayAddress,
-                         Math.min(totalChannels, MAX_SELECTABLE_FDS),
-                         readFds, writeFds, exceptFds, timeout);
+                Math.min(totalChannels, MAX_SELECTABLE_FDS),
+                readFds, writeFds, exceptFds, timeout);
         }
 
         private int poll(int index) throws IOException {
             // poll for helper threads
-            return  poll0(pollWrapper.pollArrayAddress +
-                     (pollArrayIndex * PollArrayWrapper.SIZE_POLLFD),
-                     Math.min(MAX_SELECTABLE_FDS,
-                             totalChannels - (index + 1) * MAX_SELECTABLE_FDS),
-                     readFds, writeFds, exceptFds, timeout);
+            return poll0(pollWrapper.pollArrayAddress +
+                    (pollArrayIndex * PollArrayWrapper.SIZE_POLLFD),
+                Math.min(MAX_SELECTABLE_FDS,
+                    totalChannels - (index + 1) * MAX_SELECTABLE_FDS),
+                readFds, writeFds, exceptFds, timeout);
         }
 
         private native int poll0(long pollAddress, int numfds,
-             int[] readFds, int[] writeFds, int[] exceptFds, long timeout);
+                                 int[] readFds, int[] writeFds, int[] exceptFds, long timeout);
 
         private int processSelectedKeys(long updateCount) {
             int numKeysUpdated = 0;
             numKeysUpdated += processFDSet(updateCount, readFds,
-                                           Net.POLLIN,
-                                           false);
+                Net.POLLIN,
+                false);
             numKeysUpdated += processFDSet(updateCount, writeFds,
-                                           Net.POLLCONN |
-                                           Net.POLLOUT,
-                                           false);
+                Net.POLLCONN |
+                    Net.POLLOUT,
+                false);
             numKeysUpdated += processFDSet(updateCount, exceptFds,
-                                           Net.POLLIN |
-                                           Net.POLLCONN |
-                                           Net.POLLOUT,
-                                           true);
+                Net.POLLIN |
+                    Net.POLLCONN |
+                    Net.POLLOUT,
+                true);
             return numKeysUpdated;
         }
 
@@ -336,8 +349,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
          * me.updateCount <= me.clearedCount <= updateCount
          */
         private int processFDSet(long updateCount, int[] fds, int rOps,
-                                 boolean isExceptFds)
-        {
+                                 boolean isExceptFds) {
             int numKeysUpdated = 0;
             for (int i = 1; i <= fds[0]; i++) {
                 int desc = fds[i];
@@ -350,8 +362,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
                 MapEntry me = fdMap.get(desc);
                 // If me is null, the key was deregistered in the previous
                 // processDeregisterQueue.
-                if (me == null)
-                    continue;
+                if (me == null) { continue; }
                 SelectionKeyImpl sk = me.ski;
 
                 // The descriptor may be in the exceptfds set because there is
@@ -359,8 +370,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
                 // is discarded and the key is not added to the selected set.
                 if (isExceptFds &&
                     (sk.channel() instanceof SocketChannelImpl) &&
-                    discardUrgentData(desc))
-                {
+                    discardUrgentData(desc)) {
                     continue;
                 }
 
@@ -404,10 +414,12 @@ final class WindowsSelectorImpl extends SelectorImpl {
 
     // Represents a helper thread used for select.
     private final class SelectThread extends Thread {
+
         private final int index; // index of this thread
         final SubSelector subSelector;
         private long lastRun = 0; // last run number
         private volatile boolean zombie;
+
         // Creates a new thread
         private SelectThread(int i) {
             super(null, null, "SelectorHelper", 0, false);
@@ -416,18 +428,20 @@ final class WindowsSelectorImpl extends SelectorImpl {
             //make sure we wait for next round of poll
             this.lastRun = startLock.runsCounter;
         }
+
         void makeZombie() {
             zombie = true;
         }
+
         boolean isZombie() {
             return zombie;
         }
+
         public void run() {
             while (true) { // poll loop
                 // wait for the start of poll. If this thread has become
                 // redundant, then exit.
-                if (startLock.waitForStart(this))
-                    return;
+                if (startLock.waitForStart(this)) { return; }
                 // call poll()
                 try {
                     subSelector.poll(index);
@@ -455,8 +469,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
             }
         } else if (threadsCount < threads.size()) {
             // Some threads become redundant. Remove them from the threads List.
-            for (int i = threads.size() - 1 ; i >= threadsCount; i--)
-                threads.remove(i).makeZombie();
+            for (int i = threads.size() - 1; i >= threadsCount; i--) { threads.remove(i).makeZombie(); }
         }
     }
 
@@ -464,13 +477,13 @@ final class WindowsSelectorImpl extends SelectorImpl {
     private void setWakeupSocket() {
         setWakeupSocket0(wakeupSinkFd);
     }
+
     private native void setWakeupSocket0(int wakeupSinkFd);
 
     // Sets Windows wakeup socket to a non-signaled state.
     private void resetWakeupSocket() {
         synchronized (interruptLock) {
-            if (interruptTriggered == false)
-                return;
+            if (interruptTriggered == false) { return; }
             resetWakeupSocket0(wakeupSourceFd);
             interruptTriggered = false;
         }
@@ -494,12 +507,13 @@ final class WindowsSelectorImpl extends SelectorImpl {
         updateCount++;
         int numKeysUpdated = 0;
         numKeysUpdated += subSelector.processSelectedKeys(updateCount);
-        for (SelectThread t: threads) {
+        for (SelectThread t : threads) {
             numKeysUpdated += t.subSelector.processSelectedKeys(updateCount);
         }
         return numKeysUpdated;
     }
 
+    @Override
     protected void implClose() throws IOException {
         synchronized (closeLock) {
             if (channelArray != null) {
@@ -510,12 +524,11 @@ final class WindowsSelectorImpl extends SelectorImpl {
                     }
                     wakeupPipe.sink().close();
                     wakeupPipe.source().close();
-                    for(int i = 1; i < totalChannels; i++) { // Deregister channels
+                    for (int i = 1; i < totalChannels; i++) { // Deregister channels
                         if (i % MAX_SELECTABLE_FDS != 0) { // skip wakeupEvent
                             deregister(channelArray[i]);
                             SelectableChannel selch = channelArray[i].channel();
-                            if (!selch.isOpen() && !selch.isRegistered())
-                                ((SelChImpl)selch).kill();
+                            if (!selch.isOpen() && !selch.isRegistered()) { ((SelChImpl)selch).kill(); }
                         }
                     }
                     pollWrapper.free();
@@ -523,18 +536,17 @@ final class WindowsSelectorImpl extends SelectorImpl {
                     selectedKeys = null;
                     channelArray = null;
                     // Make all remaining helper threads exit
-                    for (SelectThread t: threads)
-                         t.makeZombie();
+                    for (SelectThread t : threads) { t.makeZombie(); }
                     startLock.startThreads();
                 }
             }
         }
     }
 
+    @Override
     protected void implRegister(SelectionKeyImpl ski) {
         synchronized (closeLock) {
-            if (pollWrapper == null)
-                throw new ClosedSelectorException();
+            if (pollWrapper == null) { throw new ClosedSelectorException(); }
             growIfNeeded();
             channelArray[totalChannels] = ski;
             ski.setIndex(totalChannels);
@@ -560,23 +572,24 @@ final class WindowsSelectorImpl extends SelectorImpl {
         }
     }
 
-    protected void implDereg(SelectionKeyImpl ski) throws IOException{
+    @Override
+    protected void implDereg(SelectionKeyImpl ski) throws IOException {
         int i = ski.getIndex();
         assert (i >= 0);
         synchronized (closeLock) {
             if (i != totalChannels - 1) {
                 // Copy end one over it
-                SelectionKeyImpl endChannel = channelArray[totalChannels-1];
+                SelectionKeyImpl endChannel = channelArray[totalChannels - 1];
                 channelArray[i] = endChannel;
                 endChannel.setIndex(i);
                 pollWrapper.replaceEntry(pollWrapper, totalChannels - 1,
-                                                                pollWrapper, i);
+                    pollWrapper, i);
             }
             ski.setIndex(-1);
         }
         channelArray[totalChannels - 1] = null;
         totalChannels--;
-        if ( totalChannels != 1 && totalChannels % MAX_SELECTABLE_FDS == 1) {
+        if (totalChannels != 1 && totalChannels % MAX_SELECTABLE_FDS == 1) {
             totalChannels--;
             threadsCount--; // The last thread has become redundant.
         }
@@ -585,22 +598,21 @@ final class WindowsSelectorImpl extends SelectorImpl {
         selectedKeys.remove(ski);
         deregister(ski);
         SelectableChannel selch = ski.channel();
-        if (!selch.isOpen() && !selch.isRegistered())
-            ((SelChImpl)selch).kill();
+        if (!selch.isOpen() && !selch.isRegistered()) { ((SelChImpl)selch).kill(); }
     }
 
+    @Override
     public void putEventOps(SelectionKeyImpl sk, int ops) {
         synchronized (closeLock) {
-            if (pollWrapper == null)
-                throw new ClosedSelectorException();
+            if (pollWrapper == null) { throw new ClosedSelectorException(); }
             // make sure this sk has not been removed yet
             int index = sk.getIndex();
-            if (index == -1)
-                throw new CancelledKeyException();
+            if (index == -1) { throw new CancelledKeyException(); }
             pollWrapper.putEventOps(index, ops);
         }
     }
 
+    @Override
     public Selector wakeup() {
         synchronized (interruptLock) {
             if (!interruptTriggered) {

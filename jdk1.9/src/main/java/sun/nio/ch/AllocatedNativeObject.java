@@ -42,7 +42,7 @@ class AllocatedNativeObject                             // package-private
      * @param  size
      *         Number of bytes to allocate
      *
-     * @param  pageAligned
+     * @param  pageAligned  页对齐,是否在硬件层面进行页对齐, 也就是适配不同计算机的页大小
      *         If {@code true} then the area will be aligned on a hardware
      *         page boundary
      *

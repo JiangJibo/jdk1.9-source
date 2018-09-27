@@ -974,10 +974,12 @@ class SocketChannelImpl
         sk.selector.putEventOps(sk, newOps);
     }
 
+    @Override
     public FileDescriptor getFD() {
         return fd;
     }
 
+    @Override
     public int getFDVal() {
         return fdVal;
     }
