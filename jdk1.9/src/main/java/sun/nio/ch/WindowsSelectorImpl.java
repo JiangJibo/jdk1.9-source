@@ -49,7 +49,7 @@ import java.util.Iterator;
 
 final class WindowsSelectorImpl extends SelectorImpl {
 
-    // Initial capacity of the poll array
+    // Initial capacity of the poll array , pollWrapper 数组初始容量
     private final int INIT_CAP = 8;
     // Maximum number of sockets for select().
     // Should be INIT_CAP times a power of 2
@@ -129,6 +129,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
 
     WindowsSelectorImpl(SelectorProvider sp) throws IOException {
         super(sp);
+        // 申请64字节大小的数组用来存储pollFd, 每个pollFd默认8字节大小
         pollWrapper = new PollArrayWrapper(INIT_CAP);
         wakeupPipe = Pipe.open();
         wakeupSourceFd = ((SelChImpl)wakeupPipe.source()).getFDVal();
