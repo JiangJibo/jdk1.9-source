@@ -31,7 +31,6 @@ import java.nio.channels.spi.*;
 import java.net.SocketException;
 import java.util.*;
 
-
 /**
  * Base Selector implementation class.
  */
@@ -62,14 +61,12 @@ public abstract class SelectorImpl extends AbstractSelector {
     }
 
     public Set<SelectionKey> keys() {
-        if (!isOpen() && !Util.atBugLevel("1.4"))
-            throw new ClosedSelectorException();
+        if (!isOpen() && !Util.atBugLevel("1.4")) { throw new ClosedSelectorException(); }
         return publicKeys;
     }
 
     public Set<SelectionKey> selectedKeys() {
-        if (!isOpen() && !Util.atBugLevel("1.4"))
-            throw new ClosedSelectorException();
+        if (!isOpen() && !Util.atBugLevel("1.4")) { throw new ClosedSelectorException(); }
         return publicSelectedKeys;
     }
 
@@ -77,8 +74,7 @@ public abstract class SelectorImpl extends AbstractSelector {
 
     private int lockAndDoSelect(long timeout) throws IOException {
         synchronized (this) {
-            if (!isOpen())
-                throw new ClosedSelectorException();
+            if (!isOpen()) { throw new ClosedSelectorException(); }
             synchronized (publicKeys) {
                 synchronized (publicSelectedKeys) {
                     return doSelect(timeout);
@@ -88,10 +84,8 @@ public abstract class SelectorImpl extends AbstractSelector {
     }
 
     public int select(long timeout)
-        throws IOException
-    {
-        if (timeout < 0)
-            throw new IllegalArgumentException("Negative timeout");
+        throws IOException {
+        if (timeout < 0) { throw new IllegalArgumentException("Negative timeout"); }
         return lockAndDoSelect((timeout == 0) ? -1 : timeout);
     }
 
@@ -118,12 +112,17 @@ public abstract class SelectorImpl extends AbstractSelector {
 
     public void putEventOps(SelectionKeyImpl sk, int ops) { }
 
-    protected final SelectionKey register(AbstractSelectableChannel ch,
-                                          int ops,
-                                          Object attachment)
-    {
-        if (!(ch instanceof SelChImpl))
+    /**
+     * @param ch
+     * @param ops
+     * @param attachment
+     * @return
+     */
+    @Override
+    protected final SelectionKey register(AbstractSelectableChannel ch, int ops, Object attachment) {
+        if (!(ch instanceof SelChImpl)) {
             throw new IllegalSelectorException();
+        }
         SelectionKeyImpl k = new SelectionKeyImpl((SelChImpl)ch, this);
         k.attach(attachment);
         synchronized (publicKeys) {

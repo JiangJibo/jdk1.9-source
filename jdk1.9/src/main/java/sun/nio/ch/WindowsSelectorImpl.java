@@ -546,7 +546,9 @@ final class WindowsSelectorImpl extends SelectorImpl {
     @Override
     protected void implRegister(SelectionKeyImpl ski) {
         synchronized (closeLock) {
-            if (pollWrapper == null) { throw new ClosedSelectorException(); }
+            if (pollWrapper == null) {
+                throw new ClosedSelectorException();
+            }
             growIfNeeded();
             channelArray[totalChannels] = ski;
             ski.setIndex(totalChannels);
