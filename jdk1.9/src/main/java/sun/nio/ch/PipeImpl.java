@@ -40,14 +40,13 @@ import java.security.PrivilegedActionException;
 import java.security.SecureRandom;
 import java.util.Random;
 
-
 /**
  * A simple Pipe implementation based on a socket connection.
  */
 
 class PipeImpl
-    extends Pipe
-{
+    extends Pipe {
+
     // Number of bytes in the secret handshake.
     private static final int NUM_SECRET_BYTES = 16;
 
@@ -59,8 +58,7 @@ class PipeImpl
     private SinkChannel sink;
 
     private class Initializer
-        implements PrivilegedExceptionAction<Void>
-    {
+        implements PrivilegedExceptionAction<Void> {
 
         private final SelectorProvider sp;
 
@@ -81,7 +79,7 @@ class PipeImpl
                     public void interrupt() {}
                 };
                 connThread.start();
-                for (;;) {
+                for (; ; ) {
                     try {
                         connThread.join();
                         break;
@@ -90,8 +88,7 @@ class PipeImpl
                 Thread.currentThread().interrupt();
             }
 
-            if (ioe != null)
-                throw new IOException("Unable to establish loopback connection", ioe);
+            if (ioe != null) { throw new IOException("Unable to establish loopback connection", ioe); }
 
             return null;
         }
@@ -105,15 +102,15 @@ class PipeImpl
                 SocketChannel sc2 = null;
 
                 try {
-                    // Create secret with a backing array.
+                    // Create secret with a backing array. 分配握手字节数组
                     ByteBuffer secret = ByteBuffer.allocate(NUM_SECRET_BYTES);
                     ByteBuffer bb = ByteBuffer.allocate(NUM_SECRET_BYTES);
 
                     // Loopback address
                     InetAddress lb = InetAddress.getByName("127.0.0.1");
-                    assert(lb.isLoopbackAddress());
+                    assert (lb.isLoopbackAddress());
                     InetSocketAddress sa = null;
-                    for(;;) {
+                    for (; ; ) {
                         // Bind ServerSocketChannel to a port on the loopback
                         // address
                         if (ssc == null || !ssc.isOpen()) {
@@ -138,8 +135,7 @@ class PipeImpl
                         } while (bb.hasRemaining());
                         bb.rewind();
 
-                        if (bb.equals(secret))
-                            break;
+                        if (bb.equals(secret)) { break; }
 
                         sc2.close();
                         sc1.close();
@@ -150,22 +146,25 @@ class PipeImpl
                     sink = new SinkChannelImpl(sp, sc2);
                 } catch (IOException e) {
                     try {
-                        if (sc1 != null)
-                            sc1.close();
-                        if (sc2 != null)
-                            sc2.close();
+                        if (sc1 != null) { sc1.close(); }
+                        if (sc2 != null) { sc2.close(); }
                     } catch (IOException e2) {}
                     ioe = e;
                 } finally {
                     try {
-                        if (ssc != null)
-                            ssc.close();
+                        if (ssc != null) { ssc.close(); }
                     } catch (IOException e2) {}
                 }
             }
         }
     }
 
+    /**
+     * 会执行{@link Initializer#run()}方法
+     *
+     * @param sp
+     * @throws IOException
+     */
     PipeImpl(final SelectorProvider sp) throws IOException {
         try {
             AccessController.doPrivileged(new Initializer(sp));
