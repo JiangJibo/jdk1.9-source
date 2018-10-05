@@ -45,8 +45,7 @@ import java.util.Random;
  * A simple Pipe implementation based on a socket connection.
  */
 
-class PipeImpl
-    extends Pipe
+class PipeImpl extends Pipe
 {
     // Number of bytes in the secret handshake.
     private static final int NUM_SECRET_BYTES = 16;
@@ -58,9 +57,7 @@ class PipeImpl
     private SourceChannel source;
     private SinkChannel sink;
 
-    private class Initializer
-        implements PrivilegedExceptionAction<Void>
-    {
+    private class Initializer implements PrivilegedExceptionAction<Void> {
 
         private final SelectorProvider sp;
 

@@ -76,8 +76,7 @@ class PollArrayWrapper {
 
     // Writes the pollfd entry from the source wrapper at the source index
     // over the entry in the target wrapper at the target index.
-    void replaceEntry(PollArrayWrapper source, int sindex,
-                      PollArrayWrapper target, int tindex) {
+    void replaceEntry(PollArrayWrapper source, int sindex, PollArrayWrapper target, int tindex) {
         target.putDescriptor(tindex, source.getDescriptor(sindex));
         target.putEventOps(tindex, source.getEventOps(sindex));
     }
@@ -85,7 +84,9 @@ class PollArrayWrapper {
     // Grows the pollfd array to new size
     void grow(int newSize) {
         PollArrayWrapper temp = new PollArrayWrapper(newSize);
-        for (int i = 0; i < size; i++) { replaceEntry(this, i, temp, i); }
+        for (int i = 0; i < size; i++) {
+            replaceEntry(this, i, temp, i);
+        }
         pollArray.free();
         pollArray = temp.pollArray;
         this.size = temp.size;

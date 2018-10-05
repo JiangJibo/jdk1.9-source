@@ -28,9 +28,11 @@ package java.nio.channels;
 import java.io.IOException;
 import java.nio.channels.spi.*;
 
-
 /**
  * A pair of channels that implements a unidirectional pipe.
+ * 一对实现了单向管道的Channel, SourceChannel 用于写; SinkChannel 用于读
+ * 针对每个Selector都有一对管道,用于读取Select到的Channel里的数据, 向Channel里写入数据
+ * sink: 接收器
  *
  * <p> A pipe consists of a pair of channels: A writable {@link
  * Pipe.SinkChannel sink} channel and a readable {@link Pipe.SourceChannel source}
@@ -42,7 +44,6 @@ import java.nio.channels.spi.*;
  * system-dependent and therefore unspecified.  Many pipe implementations will
  * buffer up to a certain number of bytes between the sink and source channels,
  * but such buffering should not be assumed.  </p>
- *
  *
  * @author Mark Reinhold
  * @author JSR-51 Expert Group
@@ -58,13 +59,12 @@ public abstract class Pipe {
      */
     public abstract static class SourceChannel
         extends AbstractSelectableChannel
-        implements ReadableByteChannel, ScatteringByteChannel
-    {
+        implements ReadableByteChannel, ScatteringByteChannel {
+
         /**
          * Constructs a new instance of this class.
          *
-         * @param  provider
-         *         The selector provider
+         * @param provider The selector provider
          */
         protected SourceChannel(SelectorProvider provider) {
             super(provider);
@@ -77,7 +77,7 @@ public abstract class Pipe {
          * <p> Pipe-source channels only support reading, so this method
          * returns {@link SelectionKey#OP_READ}.  </p>
          *
-         * @return  The valid-operation set
+         * @return The valid-operation set
          */
         public final int validOps() {
             return SelectionKey.OP_READ;
@@ -92,13 +92,12 @@ public abstract class Pipe {
      */
     public abstract static class SinkChannel
         extends AbstractSelectableChannel
-        implements WritableByteChannel, GatheringByteChannel
-    {
+        implements WritableByteChannel, GatheringByteChannel {
+
         /**
          * Initializes a new instance of this class.
          *
-         * @param  provider
-         *         The selector provider
+         * @param provider The selector provider
          */
         protected SinkChannel(SelectorProvider provider) {
             super(provider);
@@ -111,7 +110,7 @@ public abstract class Pipe {
          * <p> Pipe-sink channels only support writing, so this method returns
          * {@link SelectionKey#OP_WRITE}.  </p>
          *
-         * @return  The valid-operation set
+         * @return The valid-operation set
          */
         public final int validOps() {
             return SelectionKey.OP_WRITE;
@@ -127,14 +126,14 @@ public abstract class Pipe {
     /**
      * Returns this pipe's source channel.
      *
-     * @return  This pipe's source channel
+     * @return This pipe's source channel
      */
     public abstract SourceChannel source();
 
     /**
      * Returns this pipe's sink channel.
      *
-     * @return  This pipe's sink channel
+     * @return This pipe's sink channel
      */
     public abstract SinkChannel sink();
 
@@ -146,10 +145,8 @@ public abstract class Pipe {
      * system-wide default {@link java.nio.channels.spi.SelectorProvider}
      * object.  </p>
      *
-     * @return  A new pipe
-     *
-     * @throws  IOException
-     *          If an I/O error occurs
+     * @return A new pipe
+     * @throws IOException If an I/O error occurs
      */
     public static Pipe open() throws IOException {
         return SelectorProvider.provider().openPipe();

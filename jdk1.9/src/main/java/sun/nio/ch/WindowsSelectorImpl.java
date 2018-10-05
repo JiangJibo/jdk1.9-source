@@ -136,9 +136,10 @@ final class WindowsSelectorImpl extends SelectorImpl {
 
         // Disable the Nagle algorithm so that the wakeup is more immediate
         SinkChannelImpl sink = (SinkChannelImpl)wakeupPipe.sink();
+        // 写数据时禁止TCP延迟缓冲区优化
         (sink.sc).socket().setTcpNoDelay(true);
-        wakeupSinkFd = ((SelChImpl)sink).getFDVal();
-
+        wakeupSinkFd = sink.getFDVal();
+        // 将Selector的 SourceChannel 的FD 设置到FD数组中
         pollWrapper.addWakeupSocket(wakeupSourceFd, 0);
     }
 
@@ -306,6 +307,14 @@ final class WindowsSelectorImpl extends SelectorImpl {
             this.pollArrayIndex = (threadIndex + 1) * MAX_SELECTABLE_FDS;
         }
 
+        /**
+         * 将FD数组传入内核态,将可读，可写，异常的 FD放进相应的数组中，拷贝回用户态
+         * 当某个Channel就绪时，需要遍历FD数组，查看此Channel是否在数组中，也就是是否是当前Selector来处理的，若存在，将其拷贝至相应的可读，可写，异常FD数组中
+         * 所以一次Select,需要至少遍历FD数组 1-n(n为就绪Channel数) 次FD数组,效率很低下
+         *
+         * @return
+         * @throws IOException
+         */
         private int poll() throws IOException { // poll for the main thread
             return poll0(pollWrapper.pollArrayAddress,
                 Math.min(totalChannels, MAX_SELECTABLE_FDS),
@@ -321,9 +330,26 @@ final class WindowsSelectorImpl extends SelectorImpl {
                 readFds, writeFds, exceptFds, timeout);
         }
 
+        /**
+         * Native方法,通过Select机制,获取当前可读，可写，异常的FD
+         *
+         * @param pollAddress FD数组的内存起始位置, 此位置之后为FD和ops的数据,用numfds标识地址的末尾,长度为8的倍数, 前4字节为FD值(int),后4字节为注册事件
+         * @param numfds      最多读取FD数, 不超过1024
+         * @param readFds     读就绪的FD
+         * @param writeFds    写就绪的FD
+         * @param exceptFds   异常的FD
+         * @param timeout     select超时时间
+         * @return
+         */
         private native int poll0(long pollAddress, int numfds,
                                  int[] readFds, int[] writeFds, int[] exceptFds, long timeout);
 
+        /**
+         * 处理Select得到的FD
+         *
+         * @param updateCount
+         * @return 当前就绪的Channel个数
+         */
         private int processSelectedKeys(long updateCount) {
             int numKeysUpdated = 0;
             numKeysUpdated += processFDSet(updateCount, readFds,
@@ -369,32 +395,28 @@ final class WindowsSelectorImpl extends SelectorImpl {
                 // The descriptor may be in the exceptfds set because there is
                 // OOB data queued to the socket. If there is OOB data then it
                 // is discarded and the key is not added to the selected set.
-                if (isExceptFds &&
-                    (sk.channel() instanceof SocketChannelImpl) &&
-                    discardUrgentData(desc)) {
+                if (isExceptFds && (sk.channel() instanceof SocketChannelImpl) && discardUrgentData(desc)) {
                     continue;
                 }
-
-                if (selectedKeys.contains(sk)) { // Key in selected set
+                // 更新 selectKeys 集合里的SelectionKey数据
+                if (selectedKeys.contains(sk)) { // Key in selected set , 如果SelectionKey已经存在了,比如注册的事件不止一个
                     if (me.clearedCount != updateCount) {
-                        if (sk.channel.translateAndSetReadyOps(rOps, sk) &&
-                            (me.updateCount != updateCount)) {
+                        if (sk.channel.translateAndSetReadyOps(rOps, sk) && (me.updateCount != updateCount)) {
                             me.updateCount = updateCount;
                             numKeysUpdated++;
                         }
                     } else { // The readyOps have been set; now add
-                        if (sk.channel.translateAndUpdateReadyOps(rOps, sk) &&
-                            (me.updateCount != updateCount)) {
+                        if (sk.channel.translateAndUpdateReadyOps(rOps, sk) && (me.updateCount != updateCount)) {
                             me.updateCount = updateCount;
                             numKeysUpdated++;
                         }
                     }
                     me.clearedCount = updateCount;
-                } else { // Key is not in selected set yet
+                } else {                // Key is not in selected set yet  ，  如果SelectionKey还没存入selectedKeys中
                     if (me.clearedCount != updateCount) {
                         sk.channel.translateAndSetReadyOps(rOps, sk);
                         if ((sk.nioReadyOps() & sk.nioInterestOps()) != 0) {
-                            selectedKeys.add(sk);
+                            selectedKeys.add(sk);                                // 将SelectionKey 存入selectedKeys中
                             me.updateCount = updateCount;
                             numKeysUpdated++;
                         }
