@@ -572,6 +572,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
             if (pollWrapper == null) {
                 throw new ClosedSelectorException();
             }
+            // 是否要扩容ChannelArray,或者新增Selector线程
             growIfNeeded();
             channelArray[totalChannels] = ski;
             ski.setIndex(totalChannels);
@@ -583,6 +584,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
     }
 
     private void growIfNeeded() {
+        // Channel数组长度不够了，扩容
         if (channelArray.length == totalChannels) {
             int newSize = totalChannels * 2; // Make a larger array
             SelectionKeyImpl temp[] = new SelectionKeyImpl[newSize];
@@ -590,6 +592,7 @@ final class WindowsSelectorImpl extends SelectorImpl {
             channelArray = temp;
             pollWrapper.grow(newSize);
         }
+        // 默认一个Selector线程只负责1024个Channel,如果超过,则新增一个线程
         if (totalChannels % MAX_SELECTABLE_FDS == 0) { // more threads needed
             pollWrapper.addWakeupSocket(wakeupSourceFd, totalChannels);
             totalChannels++;

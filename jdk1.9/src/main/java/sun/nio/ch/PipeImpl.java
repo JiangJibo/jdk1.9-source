@@ -163,6 +163,12 @@ class PipeImpl extends Pipe
         }
     }
 
+    /**
+     * 会执行{@link Initializer#run()}方法
+     *
+     * @param sp
+     * @throws IOException
+     */
     PipeImpl(final SelectorProvider sp) throws IOException {
         try {
             AccessController.doPrivileged(new Initializer(sp));

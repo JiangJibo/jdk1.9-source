@@ -25,13 +25,14 @@
 
 package sun.nio.ch;
 
-import java.io.FileDescriptor;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.ProtocolFamily;
-import java.nio.channels.*;
-import java.nio.channels.spi.*;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.Pipe;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelector;
+import java.nio.channels.spi.SelectorProvider;
 
 
 public abstract class SelectorProviderImpl
