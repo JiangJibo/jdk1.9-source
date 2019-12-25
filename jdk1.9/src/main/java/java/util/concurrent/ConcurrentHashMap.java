@@ -1025,21 +1025,27 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         for (Node<K,V>[] tab = table;;) {
             Node<K,V> f; int n, i, fh; K fk; V fv;
             if (tab == null || (n = tab.length) == 0)
+                // 第一个元素,初始化数组
                 tab = initTable();
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+                // 如果数组上相应位置的元素不存在，则CAS放入
                 if (casTabAt(tab, i, null, new Node<K,V>(hash, key, value)))
                     break;                   // no lock when adding to empty bin
             }
             else if ((fh = f.hash) == MOVED)
+                // 如果数组上指定元素的hash值= -1, 则说明正在扩容, 当前线程加入扩容处理队伍
                 tab = helpTransfer(tab, f);
             else if (onlyIfAbsent && fh == hash &&  // check first node
                      ((fk = f.key) == key || fk != null && key.equals(fk)) &&
                      (fv = f.val) != null)
+                // 如果对应的键值对存在, 则返回之前的值
                 return fv;
             else {
                 V oldVal = null;
+                // 锁住数组上相应hash的元素
                 synchronized (f) {
                     if (tabAt(tab, i) == f) {
+                        // 如果此位置的元素不是红黑树的节点
                         if (fh >= 0) {
                             binCount = 1;
                             for (Node<K,V> e = f;; ++binCount) {
@@ -1048,11 +1054,15 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                     ((ek = e.key) == key ||
                                      (ek != null && key.equals(ek)))) {
                                     oldVal = e.val;
+                                    // 如果存在相同key的node, 覆盖形式下替换值
                                     if (!onlyIfAbsent)
+                                        // val 有 volatile 修饰, 可以直接赋值
                                         e.val = value;
                                     break;
                                 }
+                                // 不存在相同key的node,
                                 Node<K,V> pred = e;
+                                // 循环知道找到链表上最后一个元素, 设置其next节点
                                 if ((e = e.next) == null) {
                                     pred.next = new Node<K,V>(hash, key, value);
                                     break;
@@ -1062,8 +1072,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                         else if (f instanceof TreeBin) {
                             Node<K,V> p;
                             binCount = 2;
-                            if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key,
-                                                           value)) != null) {
+                            if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key, value)) != null) {
                                 oldVal = p.val;
                                 if (!onlyIfAbsent)
                                     p.val = value;
@@ -1074,6 +1083,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     }
                 }
                 if (binCount != 0) {
+                    // 如果链表上元素的个数达到8个, 转换成红黑树
                     if (binCount >= TREEIFY_THRESHOLD)
                         treeifyBin(tab, i);
                     if (oldVal != null)
@@ -2330,6 +2340,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     private final void addCount(long x, int check) {
         CounterCell[] as; long b, s;
         if ((as = counterCells) != null ||
+            // 如果使用CAS形式将 basecount 替换成 basecount+x 不成功
             !U.compareAndSetLong(this, BASECOUNT, b = baseCount, s = b + x)) {
             CounterCell a; long v; int m;
             boolean uncontended = true;
@@ -2346,8 +2357,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         }
         if (check >= 0) {
             Node<K,V>[] tab, nt; int n, sc;
-            while (s >= (long)(sc = sizeCtl) && (tab = table) != null &&
-                   (n = tab.length) < MAXIMUM_CAPACITY) {
+            while (s >= (long)(sc = sizeCtl) && (tab = table) != null && (n = tab.length) < MAXIMUM_CAPACITY) {
                 int rs = resizeStamp(n);
                 if (sc < 0) {
                     if ((sc >>> RESIZE_STAMP_SHIFT) != rs || sc == rs + 1 ||
@@ -2676,6 +2686,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     private final void treeifyBin(Node<K,V>[] tab, int index) {
         Node<K,V> b; int n;
         if (tab != null) {
+            //如果整个table的数量小于64，就扩容至原来的一倍，不转红黑树了
+            //因为这个阈值扩容可以减少hash冲突，不必要去转红黑树
             if ((n = tab.length) < MIN_TREEIFY_CAPACITY)
                 tryPresize(n << 1);
             else if ((b = tabAt(tab, index)) != null && b.hash >= 0) {
